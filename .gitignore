@@ -1,0 +1,6 @@
+
+.ccls
+.ccls-cache/
+bin/wc2
+bin/gmon.out
+bin/analysis.txt
