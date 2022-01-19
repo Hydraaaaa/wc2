@@ -494,8 +494,6 @@ int main()
 		// Draw Debug Paths
 		for (int i = 0; i < pathfinderCount; i++)
 		{
-			Rectangle rect = {0.0f, 0.0f, 70.0f, 70.0f};
-
 			// Draw debug paths
 			if (pathfinders[i].currentPathIndex < pathfinders[i].currentPathLength)
 			{
