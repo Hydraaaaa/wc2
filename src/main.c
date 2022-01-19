@@ -28,7 +28,7 @@ int main()
 
 	printf("%li\n", sizeof(PathingNode));
 
-	Scenario_Load(scenario, "scenarios/Garden of War BNE.pud");
+	Scenario_Load(scenario, "scenarios/Gold Rush BNE.pud");
 
 	// Pathfinder list
 	Pathfinder* pathfinders = malloc(sizeof(Pathfinder) * 100);
@@ -394,6 +394,9 @@ int main()
 					Vector2 vec = {x * 32.0f + cameraPosX, y * 32.0f + cameraPosY};
 
 					DrawTextureRec(terrainSpriteSheet, rect, vec, WHITE);
+
+					sprintf(fpsString, "%i.%i", scenario->pathingNodes[yIndex + x].posX, scenario->pathingNodes[yIndex + x].posY);
+					DrawText(fpsString, x * 32.0f + cameraPosX, y * 32.0f + cameraPosY, 10, RAYWHITE);
 				}
 				else
 				{

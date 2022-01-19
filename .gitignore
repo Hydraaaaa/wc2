@@ -2,6 +2,7 @@
 .ccls
 .ccls-cache/
 bin/wc2
+bin/unittests
 bin/gmon.out
 bin/analysis.txt
 notes
