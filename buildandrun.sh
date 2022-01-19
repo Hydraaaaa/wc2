@@ -7,6 +7,6 @@ then
 	echo -e "BUILD SUCCEEDED
 "
 	cd bin
-	gdb ./wc2 -ex=r
+	gdb ./wc2 -ex=r -q
 	run
 fi
