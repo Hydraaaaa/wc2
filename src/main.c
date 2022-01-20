@@ -184,7 +184,7 @@ int main()
 
 			for (int i = 0; i < selectedUnitCount; i++)
 			{
-				Pathfinder_GetPath(selectedUnits[i], &scenario->pathingNodes[mouseX + mouseY * scenario->mapSize], scenario, PATH_LAND);
+				Pathfinder_GetPath(selectedUnits[i], &scenario->pathingNodes[mouseX + mouseY * scenario->mapSize], scenario);
 			}
 		}
 
@@ -202,6 +202,7 @@ int main()
 				pathfinders[pathfinderCount].currentPath = malloc(0);
 				pathfinders[pathfinderCount].currentPathLength = 0;
 				pathfinders[pathfinderCount].currentPathIndex = 0;
+				pathfinders[pathfinderCount].pathingFlag = PATH_LAND;
 				pathfinders[pathfinderCount].isPathfinding = false;
 
 				scenario->pathingNodes[nodeIndex].currentPathfinder = &pathfinders[pathfinderCount];
@@ -252,6 +253,10 @@ int main()
 
 			Scenario_UpdateRegions(scenario);
 		}
+
+
+		// Rendering <><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
 
         BeginDrawing();
 

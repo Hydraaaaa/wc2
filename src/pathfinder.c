@@ -15,6 +15,12 @@ struct Pathfinder
 	PathingNode** currentPath;
 	u16 currentPathLength;
 	u16 currentPathIndex;
+
+	// 00000001 Land Pathable
+	// 00000010 Water Pathable
+	// 00000100 Air Pathable
+	u8 pathingFlag;
+
 	bool isPathfinding;
 };
 
@@ -46,7 +52,7 @@ int GetHeuristic(PathingNodeReference* source, PathingNode* destination)
 }
 
 // Typical Astar search algorithm
-void Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destination, Scenario* scenario, PathingFlag pathingFlag)
+void Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destination, Scenario* scenario)
 {
 	// Create a wrapper for each pathing node on the map, to store values that are specific to this algorithm
 	PathingNodeReference* pathingNodes = malloc(scenario->mapSize * scenario->mapSize * sizeof(PathingNodeReference));
@@ -98,7 +104,7 @@ void Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 		for (int i = 0; i < currentNode->pathingNode->connectionCount; i++)
 		{
 			// Check if this connection is unpathable or already closed
-			if ((currentNode->pathingNode->connections[i]->type & pathingFlag) == 0 ||
+			if ((currentNode->pathingNode->connections[i]->type & pathfinder->pathingFlag) == 0 ||
 				currentNode->closed == true ||
 				(currentNode->pathingNode->connections[i]->currentPathfinder != NULL &&
 				!currentNode->pathingNode->connections[i]->currentPathfinder->isPathfinding))
@@ -193,7 +199,7 @@ void Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 // but targeting unpathable nodes instead of pathable ones, and without any backtracking for a path
 //
 // It also resolves cases where multiple pathfinders are targeting the same node
-void Pathfinder_GetPath(Pathfinder* pathfinder, PathingNode* destination, Scenario* scenario, PathingFlag pathingFlag)
+void Pathfinder_GetPath(Pathfinder* pathfinder, PathingNode* destination, Scenario* scenario)
 {
 	pathfinder->desiredLocation = destination;
 
@@ -237,14 +243,14 @@ void Pathfinder_GetPath(Pathfinder* pathfinder, PathingNode* destination, Scenar
 
 		bool pathable = false;
 
-		if (pathingFlag == PATH_WATER)
+		if (pathfinder->pathingFlag == PATH_WATER)
 		{
 			if (currentNode->pathingNode->waterRegion == pathfinder->currentLocation->waterRegion)
 			{
 				pathable = true;
 			}
 		}
-		else if (pathingFlag == PATH_LAND)
+		else if (pathfinder->pathingFlag == PATH_LAND)
 		{
 			if (currentNode->pathingNode->landRegion == pathfinder->currentLocation->landRegion)
 			{
@@ -263,7 +269,7 @@ void Pathfinder_GetPath(Pathfinder* pathfinder, PathingNode* destination, Scenar
 				currentNode->pathingNode->currentPathfinder->isPathfinding ||
 				currentNode->pathingNode->currentPathfinder == pathfinder)
 			{
-				Pathfinder_PathToDestination(pathfinder, currentNode->pathingNode, scenario, pathingFlag);
+				Pathfinder_PathToDestination(pathfinder, currentNode->pathingNode, scenario);
 
 				// If there's already a pathfinder pathing toward this node
 				if (currentNode->pathingNode->destinedPathfinder != NULL &&

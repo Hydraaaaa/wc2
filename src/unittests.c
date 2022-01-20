@@ -28,6 +28,7 @@ int main()
 		pathfinders[i].currentPath = malloc(0);
 		pathfinders[i].currentPathLength = 0;
 		pathfinders[i].currentPathIndex = 0;
+		pathfinders[i].pathingFlag = PATH_LAND;
 		pathfinders[i].isPathfinding = false;
 
 		scenario->pathingNodes[nodeIndex].currentPathfinder = &pathfinders[i];
@@ -62,7 +63,7 @@ int main()
 
 	for (int i = 0; i < DESTINATION_COUNT; i++)
 	{
-		Pathfinder_GetPath(&pathfinders[i], &scenario->pathingNodes[destinationX[i] + destinationY[i] * scenario->mapSize], scenario, PATH_LAND);
+		Pathfinder_GetPath(&pathfinders[i], &scenario->pathingNodes[destinationX[i] + destinationY[i] * scenario->mapSize], scenario);
 	}
 
 	int correctDestinationX[DESTINATION_COUNT] = {16, 16};
