@@ -26,7 +26,8 @@ int main()
 
 	Scenario* scenario = malloc(sizeof(Scenario));
 
-	printf("%li\n", sizeof(PathingNode));
+	printf("PathingNode: %li\n", sizeof(PathingNode));
+	printf("Pathfinder: %li\n", sizeof(Pathfinder));
 
 	Scenario_Load(scenario, "scenarios/Gold Rush BNE.pud");
 
@@ -42,7 +43,7 @@ int main()
 	int mouseStartPosX, mouseStartPosY;
 	bool dragging = false;
 
-	Pathfinder* selectedUnits[32];
+	Pathfinder* selectedUnits[64];
 	int selectedUnitCount = 0;
 
     // Main game loop
@@ -168,24 +169,7 @@ int main()
 			int mouseX = (GetMouseX() - cameraPosX) / 32;
 			int mouseY = (GetMouseY() - cameraPosY) / 32;
 
-			// Clean up old paths so that pathfinders don't defer a destination to a pathfinder that's about to change theirs
-			// Pre-emptively mark pathfinders as pathfinding so they don't act as pathing blockers
-			for (int i = 0; i < selectedUnitCount; i++)
-			{
-				if (selectedUnits[i]->currentPathLength > 0)
-				{
-					selectedUnits[i]->currentPath[selectedUnits[i]->currentPathLength - 1]->destinedPathfinder = NULL;
-				}
-
-				selectedUnits[i]->currentPathLength = 0;
-				selectedUnits[i]->currentPathIndex = 0;
-				selectedUnits[i]->isPathfinding = true;
-			}
-
-			for (int i = 0; i < selectedUnitCount; i++)
-			{
-				Pathfinder_GetPath(selectedUnits[i], &scenario->pathingNodes[mouseX + mouseY * scenario->mapSize], scenario);
-			}
+			CommandPathfinders(selectedUnits, selectedUnitCount, &scenario->pathingNodes[mouseX + mouseY * scenario->mapSize], scenario);
 		}
 
 		// Grunt Spawner
@@ -229,25 +213,19 @@ int main()
 
 		if (IsKeyPressed(KEY_M))
 		{
+			// Reset pathfinders' moved state
 			for (int i = 0; i < pathfinderCount; i++)
 			{
-				if (pathfinders[i].currentPathIndex < pathfinders[i].currentPathLength)
+				pathfinders[i].hasMoved = false;
+			}
+
+			Pathfinder* dependencyStack[32];
+
+			for (int i = 0; i < pathfinderCount; i++)
+			{
+				if (!pathfinders[i].hasMoved)
 				{
-					if (pathfinders[i].currentPath[pathfinders[i].currentPathIndex]->currentPathfinder == NULL)
-					{
-						pathfinders[i].currentLocation->currentPathfinder = NULL;
-						
-						pathfinders[i].currentLocation = pathfinders[i].currentPath[pathfinders[i].currentPathIndex];
-
-						pathfinders[i].currentLocation->currentPathfinder = &pathfinders[i];
-						
-						if (pathfinders[i].currentLocation->destinedPathfinder == &pathfinders[i])
-						{
-							pathfinders[i].currentLocation->destinedPathfinder = NULL;
-						}
-
-						pathfinders[i].currentPathIndex++;
-					}
+					Pathfinder_Move(&pathfinders[i], dependencyStack, 0, scenario);
 				}
 			}
 
@@ -400,8 +378,9 @@ int main()
 
 					DrawTextureRec(terrainSpriteSheet, rect, vec, WHITE);
 
-					sprintf(fpsString, "%i.%i", scenario->pathingNodes[yIndex + x].posX, scenario->pathingNodes[yIndex + x].posY);
-					DrawText(fpsString, x * 32.0f + cameraPosX, y * 32.0f + cameraPosY, 10, RAYWHITE);
+					// Debug node co-ordinates
+					//sprintf(fpsString, "%i.%i", scenario->pathingNodes[yIndex + x].posX, scenario->pathingNodes[yIndex + x].posY);
+					//DrawText(fpsString, x * 32.0f + cameraPosX, y * 32.0f + cameraPosY, 10, RAYWHITE);
 				}
 				else
 				{

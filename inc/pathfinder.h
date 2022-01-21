@@ -16,9 +16,14 @@ typedef enum PathingFlag
 typedef struct Pathfinder Pathfinder;
 
 // Perform an astar search to get a sequence of nodes leading to the specified destination
-void Pathfinder_GetPath(Pathfinder* pathfinder, PathingNode* destination, Scenario* scenario);
+void Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destination, Scenario* scenario);
 
 // Perform a dijkstra search to get the closest available node to the destination
-PathingNode* Pathfinder_GetNearestDestination(Pathfinder* pathfinder, PathingNode* destination, Scenario* scenario);
+void Pathfinder_GetPath(Pathfinder* pathfinder, PathingNode* destination, Scenario* scenario);
+
+// Basically calls Pathfinder_GetNearestDestination for pathfinders[]
+void CommandPathfinders(Pathfinder* pathfinders[], int pathfinderCount, PathingNode* destination, Scenario* scenario);
+
+void Pathfinder_Move(Pathfinder* pathfinder, Pathfinder* dependencyStack[], int dependencyStackLength, Scenario* scenario);
 
 #endif

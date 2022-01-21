@@ -22,6 +22,7 @@ struct Pathfinder
 	u8 pathingFlag;
 
 	bool isPathfinding;
+	bool hasMoved; // When move commands are issued, this will let other pathfinders know that this pathfinder has already moved this frame
 };
 
 // Need to store the g and h outside of the pathing node due to the conflicting use of them by GetPath and PathToDestination
@@ -364,6 +365,157 @@ void Pathfinder_GetPath(Pathfinder* pathfinder, PathingNode* destination, Scenar
 	{
 		//printf("GetPath Fail\n");
 		return;
+	}
+}
+
+void CommandPathfinders(Pathfinder* pathfinders[], int pathfinderCount, PathingNode* destination, Scenario* scenario)
+{
+	// Clean up old paths so that pathfinders don't defer a destination to a pathfinder that's about to change theirs
+	// Pre-emptively mark pathfinders as pathfinding so they don't act as pathing blockers
+	for (int i = 0; i < pathfinderCount; i++)
+	{
+		if (pathfinders[i]->currentPathLength > 0)
+		{
+			pathfinders[i]->currentPath[pathfinders[i]->currentPathLength - 1]->destinedPathfinder = NULL;
+		}
+
+		pathfinders[i]->currentPathLength = 0;
+		pathfinders[i]->currentPathIndex = 0;
+		pathfinders[i]->isPathfinding = true;
+	}
+
+	for (int i = 0; i < pathfinderCount; i++)
+	{
+		Pathfinder_GetPath(pathfinders[i], destination, scenario);
+	}
+}
+
+void Pathfinder_Move(Pathfinder* pathfinder, Pathfinder* dependencyStack[], int dependencyStackLength, Scenario* scenario)
+{
+	if (pathfinder->isPathfinding)
+	{
+		bool recalculatePath = false;
+
+		for (int i = pathfinder->currentPathIndex; i < pathfinder->currentPathLength; i++)
+		{
+			if ((pathfinder->currentPath[i]->type & pathfinder->pathingFlag) == 0 ||
+				(pathfinder->currentPath[i]->currentPathfinder != NULL &&
+				!pathfinder->currentPath[i]->currentPathfinder->isPathfinding))
+			{
+				recalculatePath = true;
+				break;
+			}
+		}
+
+		if (recalculatePath)
+		{
+			Pathfinder_GetPath(pathfinder, pathfinder->desiredLocation, scenario);
+		}
+
+		Pathfinder* nextNodePathfinder = pathfinder->currentPath[pathfinder->currentPathIndex]->currentPathfinder;
+
+		// If next node is blocked by another pathfinder
+		if (nextNodePathfinder != NULL)
+		{
+			// If the blocker hasn't moved yet, try adding them to the stack
+			if (!nextNodePathfinder->hasMoved)
+			{
+				bool circularDependency = false;
+
+				// Check for a circular dependency
+				for (int i = 0; i < dependencyStackLength; i++)
+				{
+					if (nextNodePathfinder == dependencyStack[i])
+					{
+						// Circular Dependency
+						// Resolve all pathfinders down to nextNodePathfinder
+						// Discard the rest
+						circularDependency = true;
+
+						dependencyStack[dependencyStackLength] = pathfinder;
+
+						bool finished = false;
+
+						while (true)
+						{
+							pathfinder = dependencyStack[dependencyStackLength];
+
+							pathfinder->currentLocation->currentPathfinder = NULL;
+
+							pathfinder->currentLocation = pathfinder->currentPath[pathfinder->currentPathIndex];
+
+							pathfinder->currentLocation->currentPathfinder = pathfinder;
+
+							// If reached destination
+							if (pathfinder->currentLocation->destinedPathfinder == pathfinder)
+							{
+								pathfinder->currentLocation->destinedPathfinder = NULL;
+								pathfinder->isPathfinding = false;
+							}
+
+							pathfinder->currentPathIndex++;
+							pathfinder->hasMoved = true;
+
+							dependencyStackLength--;
+
+							// Using this because it needs to run one last time once the end condition is met
+							if (finished)
+							{
+								break;
+							}
+
+							if (dependencyStack[dependencyStackLength] == nextNodePathfinder)
+							{
+								finished = true;
+							}
+						}
+
+						break;
+					}
+				}
+
+				if (!circularDependency)
+				{
+					dependencyStack[dependencyStackLength] = pathfinder;
+					dependencyStackLength++;
+
+					Pathfinder_Move(pathfinder->currentPath[pathfinder->currentPathIndex]->currentPathfinder, dependencyStack, dependencyStackLength, scenario);
+				}
+			}
+			else
+			{
+				// Reset dependency stack, blocked so no action
+				dependencyStackLength = 0;
+			}
+		}
+		else
+		{
+			// Add to dependency stack, then move all the pathfinders in the stack, since they're all free now
+			dependencyStack[dependencyStackLength] = pathfinder;
+
+			while (dependencyStackLength >= 0)
+			{
+				pathfinder = dependencyStack[dependencyStackLength];
+
+				pathfinder->currentLocation->currentPathfinder = NULL;
+
+				pathfinder->currentLocation = pathfinder->currentPath[pathfinder->currentPathIndex];
+
+				pathfinder->currentLocation->currentPathfinder = pathfinder;
+
+				// If reached destination
+				if (pathfinder->currentLocation->destinedPathfinder == pathfinder)
+				{
+					pathfinder->currentLocation->destinedPathfinder = NULL;
+					pathfinder->isPathfinding = false;
+				}
+
+				pathfinder->currentPathIndex++;
+				pathfinder->hasMoved = true;
+
+				dependencyStackLength--;
+			}
+		}
 	}
 }
 
