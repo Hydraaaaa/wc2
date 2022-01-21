@@ -77,6 +77,7 @@ void Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 	openSet[0]->h = GetHeuristic(openSet[0], destination);
 
 	bool success = false;
+	bool exception = false; // When open set is about to oveflow
 
 	// While there are pathable neighbouring nodes to any nodes searched so far
 	while (openSetLength > 0)
@@ -123,6 +124,13 @@ void Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 				// G value will always be 32767 if node hasn't been added to the open list yet
 				if (connection->g == 32767)
 				{
+					if (openSetLength >= 256)
+					{
+						printf("openSet limit reached, failing pathfind\n");
+						exception = true;
+						break;
+					}
+
 					openSet[openSetLength] = connection;
 					openSetLength++;
 				}
@@ -141,6 +149,11 @@ void Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 
 		// Set current node to closed
 		currentNode->closed = true;
+
+		if (exception)
+		{
+			break;
+		}
 	}
 
 	// Remove old path
@@ -368,7 +381,7 @@ void Pathfinder_GetPath(Pathfinder* pathfinder, PathingNode* destination, Scenar
 	}
 }
 
-void CommandPathfinders(Pathfinder* pathfinders[], int pathfinderCount, PathingNode* destination, Scenario* scenario)
+void CommandPathfindersPoint(Pathfinder* pathfinders[], int pathfinderCount, PathingNode* destination, Scenario* scenario)
 {
 	// Clean up old paths so that pathfinders don't defer a destination to a pathfinder that's about to change theirs
 	// Pre-emptively mark pathfinders as pathfinding so they don't act as pathing blockers
@@ -387,6 +400,32 @@ void CommandPathfinders(Pathfinder* pathfinders[], int pathfinderCount, PathingN
 	for (int i = 0; i < pathfinderCount; i++)
 	{
 		Pathfinder_GetPath(pathfinders[i], destination, scenario);
+	}
+}
+
+void CommandPathfindersFormation(Pathfinder* pathfinders[], int pathfinderCount, int offsetX, int offsetY, Scenario* scenario)
+{
+	// Clean up old paths so that pathfinders don't defer a destination to a pathfinder that's about to change theirs
+	// Pre-emptively mark pathfinders as pathfinding so they don't act as pathing blockers
+	for (int i = 0; i < pathfinderCount; i++)
+	{
+		if (pathfinders[i]->currentPathLength > 0)
+		{
+			pathfinders[i]->currentPath[pathfinders[i]->currentPathLength - 1]->destinedPathfinder = NULL;
+		}
+
+		pathfinders[i]->currentPathLength = 0;
+		pathfinders[i]->currentPathIndex = 0;
+		pathfinders[i]->isPathfinding = true;
+	}
+
+	for (int i = 0; i < pathfinderCount; i++)
+	{
+		int indexX = pathfinders[i]->currentLocation->posX + offsetX;
+		int indexY = pathfinders[i]->currentLocation->posY + offsetY;
+
+		PathingNode* node = &scenario->pathingNodes[indexX + indexY * scenario->mapSize];
+		Pathfinder_GetPath(pathfinders[i], node, scenario);
 	}
 }
 

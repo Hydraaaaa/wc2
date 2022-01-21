@@ -32,7 +32,7 @@ int main()
 	Scenario_Load(scenario, "scenarios/Gold Rush BNE.pud");
 
 	// Pathfinder list
-	Pathfinder* pathfinders = malloc(sizeof(Pathfinder) * 100);
+	Pathfinder* pathfinders = malloc(sizeof(Pathfinder) * 128);
 	int pathfinderCount = 0;
 
 	// Debug Pathing Blockers
@@ -43,7 +43,7 @@ int main()
 	int mouseStartPosX, mouseStartPosY;
 	bool dragging = false;
 
-	Pathfinder* selectedUnits[64];
+	Pathfinder* selectedUnits[128];
 	int selectedUnitCount = 0;
 
     // Main game loop
@@ -166,34 +166,97 @@ int main()
 
 		if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON))
 		{
-			int mouseX = (GetMouseX() - cameraPosX) / 32;
-			int mouseY = (GetMouseY() - cameraPosY) / 32;
+			if (selectedUnitCount > 0)
+			{
+				int mouseX = (GetMouseX() - cameraPosX) / 32;
+				int mouseY = (GetMouseY() - cameraPosY) / 32;
 
-			CommandPathfinders(selectedUnits, selectedUnitCount, &scenario->pathingNodes[mouseX + mouseY * scenario->mapSize], scenario);
+				// Check if selected units are all contained within a 4x4 box
+				int minX = selectedUnits[0]->currentLocation->posX;
+				int maxX = minX;
+				int minY = selectedUnits[0]->currentLocation->posY;
+				int maxY = minY;
+
+				bool formationMove = true;
+
+				for (int i = 1; i < selectedUnitCount; i++)
+				{
+					PathingNode* location = selectedUnits[i]->currentLocation;
+
+					if (location->posX > maxX)
+					{
+						maxX = location->posX;
+					}
+
+					if (location->posX < minX)
+					{
+						minX = location->posX;
+					}
+
+					if (location->posY > maxY)
+					{
+						maxY = location->posY;
+					}
+
+					if (location->posY < minY)
+					{
+						minY = location->posY;
+					}
+
+					if (maxX - minX > 3 ||
+						maxY - minY > 3)
+					{
+						formationMove = false;
+						break;
+					}
+				}
+
+				// If units are contained within a 4x4 box
+				if (formationMove)
+				{
+					int offsetX = mouseX - ((maxX - minX) / 2 + minX);
+					int offsetY = mouseY - ((maxY - minY) / 2 + minY);
+
+					// Maintain formation at destination
+					CommandPathfindersFormation(selectedUnits, selectedUnitCount, offsetX, offsetY, scenario);
+				}
+				else
+				{
+					// Just clump around the destination
+					CommandPathfindersPoint(selectedUnits, selectedUnitCount, &scenario->pathingNodes[mouseX + mouseY * scenario->mapSize], scenario);
+				}
+			}
 		}
 
 		// Grunt Spawner
 		if (IsKeyPressed(KEY_A))
 		{
-			int mouseX = (GetMouseX() - cameraPosX) / 32;
-			int mouseY = (GetMouseY() - cameraPosY) / 32;
-
-			int nodeIndex = mouseX + mouseY * scenario->mapSize;
-
-			if (scenario->pathingNodes[nodeIndex].currentPathfinder == NULL)
+			if (pathfinderCount >= 128)
 			{
-				pathfinders[pathfinderCount].currentLocation = &scenario->pathingNodes[nodeIndex];
-				pathfinders[pathfinderCount].currentPath = malloc(0);
-				pathfinders[pathfinderCount].currentPathLength = 0;
-				pathfinders[pathfinderCount].currentPathIndex = 0;
-				pathfinders[pathfinderCount].pathingFlag = PATH_LAND;
-				pathfinders[pathfinderCount].isPathfinding = false;
+				printf("Pathfinder limit reached, not spawning\n");
+			}
+			else
+			{
+				int mouseX = (GetMouseX() - cameraPosX) / 32;
+				int mouseY = (GetMouseY() - cameraPosY) / 32;
 
-				scenario->pathingNodes[nodeIndex].currentPathfinder = &pathfinders[pathfinderCount];
+				int nodeIndex = mouseX + mouseY * scenario->mapSize;
 
-				pathfinderCount++;
+				if (scenario->pathingNodes[nodeIndex].currentPathfinder == NULL)
+				{
+					pathfinders[pathfinderCount].currentLocation = &scenario->pathingNodes[nodeIndex];
+					pathfinders[pathfinderCount].currentPath = malloc(0);
+					pathfinders[pathfinderCount].currentPathLength = 0;
+					pathfinders[pathfinderCount].currentPathIndex = 0;
+					pathfinders[pathfinderCount].pathingFlag = PATH_LAND;
+					pathfinders[pathfinderCount].isPathfinding = false;
 
-				Scenario_UpdateRegions(scenario);
+					scenario->pathingNodes[nodeIndex].currentPathfinder = &pathfinders[pathfinderCount];
+
+					pathfinderCount++;
+
+					Scenario_UpdateRegions(scenario);
+				}
 			}
 		}
 
