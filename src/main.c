@@ -242,7 +242,8 @@ int main()
 
 				int nodeIndex = mouseX + mouseY * scenario->mapSize;
 
-				if (scenario->pathingNodes[nodeIndex].currentPathfinder == NULL)
+				if (scenario->pathingNodes[nodeIndex].currentPathfinder == NULL &&
+					(scenario->pathingNodes[nodeIndex].type & PATH_LAND) != 0)
 				{
 					pathfinders[pathfinderCount].currentLocation = &scenario->pathingNodes[nodeIndex];
 					pathfinders[pathfinderCount].currentPath = malloc(0);
