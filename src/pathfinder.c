@@ -66,9 +66,9 @@ void Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 		pathingNodes[i].closed = false;
 	}
 
-	PathingNodeReference* openSet[256];
+	PathingNodeReference* openSet[512];
 
-	u8 openSetLength = 1;
+	int openSetLength = 1;
 
 	openSet[0] = &pathingNodes[pathfinder->currentLocation->posX + pathfinder->currentLocation->posY * scenario->mapSize];
 
@@ -77,7 +77,6 @@ void Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 	openSet[0]->h = GetHeuristic(openSet[0], destination);
 
 	bool success = false;
-	bool exception = false; // When open set is about to oveflow
 
 	// While there are pathable neighbouring nodes to any nodes searched so far
 	while (openSetLength > 0)
@@ -124,13 +123,6 @@ void Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 				// G value will always be 32767 if node hasn't been added to the open list yet
 				if (connection->g == 32767)
 				{
-					if (openSetLength >= 256)
-					{
-						printf("openSet limit reached, failing pathfind\n");
-						exception = true;
-						break;
-					}
-
 					openSet[openSetLength] = connection;
 					openSetLength++;
 				}
@@ -144,16 +136,15 @@ void Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 		// Remove current element from open set
 		openSetLength--;
 
-		// Shift all subsequent open set elements back by 1, overwriting the current element in the open set
-		memcpy(&openSet[index], &openSet[index + 1], sizeof(PathingNode*) * (openSetLength - index));
-
-		// Set current node to closed
-		currentNode->closed = true;
-
-		if (exception)
+		// memmove errors if it tries to move 0 bytes
+		if (openSetLength > index)
 		{
-			break;
+			// Shift all subsequent open set elements back by 1, overwriting the current element in the open set
+			// Not overflowing because we already decremented openSetLength
+			memmove(&openSet[index], &openSet[index + 1], sizeof(PathingNode*) * (openSetLength - index));
 		}
+
+		currentNode->closed = true;
 	}
 
 	// Remove old path
@@ -228,9 +219,9 @@ void Pathfinder_GetPath(Pathfinder* pathfinder, PathingNode* destination, Scenar
 		pathingNodes[i].closed = false;
 	}
 
-	PathingNodeReference* openSet[256];
+	PathingNodeReference* openSet[512];
 
-	u8 openSetLength = 1;
+	int openSetLength = 1;
 
 	openSet[0] = &pathingNodes[destination->posX + destination->posY * scenario->mapSize];
 
@@ -328,7 +319,6 @@ void Pathfinder_GetPath(Pathfinder* pathfinder, PathingNode* destination, Scenar
 				}
 				else
 				{
-					//printf("Success\n");
 					success = true;
 					destination = currentNode->pathingNode;
 					destination->destinedPathfinder = pathfinder;
@@ -367,10 +357,14 @@ void Pathfinder_GetPath(Pathfinder* pathfinder, PathingNode* destination, Scenar
 		// Remove current element from open set
 		openSetLength--;
 
-		// Shift all subsequent open set elements back by 1, overwriting the current element in the open set
-		memcpy(&openSet[index], &openSet[index + 1], sizeof(PathingNode*) * (openSetLength - index));
+		// memmove errors if it tries to move 0 bytes
+		if (openSetLength > index)
+		{
+			// Shift all subsequent open set elements back by 1, overwriting the current element in the open set
+			// Not overflowing because we already decremented openSetLength
+			memmove(&openSet[index], &openSet[index + 1], sizeof(PathingNode*) * (openSetLength - index));
+		}
 
-		// Set current node to closed
 		currentNode->closed = true;
 	}
 
