@@ -54,6 +54,37 @@ int main()
 		// Camera controls
 		float cameraSpeed = time * 1024.0f;
 
+		// Get test printout of current path state, useful for setting up tests
+		if (IsKeyDown(KEY_RIGHT_BRACKET))
+		{
+			printf("PathfinderResult* pathfinderResults;\n");
+			printf("const int pathfinderCount = %i;\n\n", pathfinderCount);
+
+			printf("Point* blockers;\n");
+			printf("const int blockerCount = %i;\n\n", pathingBlockerCount);
+
+			printf("pathfinderResults = malloc(sizeof(PathfinderResult) * pathfinderCount);\n");
+
+			for (int i = 0; i < pathfinderCount; i++)
+			{
+				printf("pathfinderResults[%i].startPos = (Point){%i, %i};\n", i, pathfinders[i].currentLocation->posX, pathfinders[i].currentLocation->posY);
+				printf("pathfinderResults[%i].pathLength = %i;\n", i, pathfinders[i].currentPathLength);
+				printf("pathfinderResults[%i].path = malloc(sizeof(Point) * %i);\n", i, pathfinders[i].currentPathLength);
+
+				for (int j = 0; j < pathfinders[i].currentPathLength; j++)
+				{
+					printf("pathfinderResults[%i].path[%i] = (Point){%i, %i};\n", i, j, pathfinders[i].currentPath[j]->posX, pathfinders[i].currentPath[j]->posY);
+				}
+			}
+
+			printf("blockers = malloc(sizeof(Point) * blockerCount);\n");
+
+			for (int i = 0; i < pathingBlockerCount; i++)
+			{
+				printf("blockers[%i] = (Point){%i, %i};\n", i, pathingBlockers[i]->posX, pathingBlockers[i]->posY);
+			}
+		}
+
 		if (IsKeyDown(KEY_UP))
 		{
 			cameraPosY += cameraSpeed;
