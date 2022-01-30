@@ -139,17 +139,18 @@ void RunTest(char* filePath)
 	TestAction* action = test.firstAction;
 	TestFrameData* frameData = test.firstFrameData;
 
+	time_t time = 0;
+
 	while (action != NULL)
 	{
-
 		bool checkFrameData = false;
+
+		time_t timeSegment = clock();
 
 		switch (action->action)
 		{
 			case ACTION_SPAWN_GRUNT:
 			{
-				printf("Spawn grunt(%i, %i)\n", action->param1, action->param2);
-
 				if (pathfinderCount >= 128)
 				{
 					printf("Pathfinder limit reached, not spawning\n");
@@ -183,7 +184,6 @@ void RunTest(char* filePath)
 			}
 			case ACTION_SPAWN_BLOCKER:
 			{
-				printf("Spawn blocker(%i, %i)\n", action->param1, action->param2);
 				int x = action->param1;
 				int y = action->param2;
 
@@ -198,7 +198,6 @@ void RunTest(char* filePath)
 			}
 			case ACTION_SELECT:
 			{
-				printf("Select(%i, %i, %i, %i)\n", action->param1, action->param2, action->param3, action->param4);
 				int startX = action->param1;
 				int startY = action->param2;
 				int endX = action->param3;
@@ -224,7 +223,6 @@ void RunTest(char* filePath)
 			}
 			case ACTION_PATHFIND:
 			{
-				printf("Pathfind(%i, %i)\n", action->param1, action->param2);
 				checkFrameData = true;
 
 				int x = action->param1;
@@ -289,7 +287,6 @@ void RunTest(char* filePath)
 			}
 			case ACTION_MOVE:
 			{
-				printf("Move\n");
 				checkFrameData = true;
 
 				// Reset pathfinders' moved state
@@ -313,6 +310,8 @@ void RunTest(char* filePath)
 				break;
 			}
 		}
+
+		time += clock() - timeSegment;
 
 		if (checkFrameData)
 		{
@@ -364,10 +363,12 @@ void RunTest(char* filePath)
 		action = action->next;
 	}
 
+	time = clock() - time;
+
 	if (success)
 	{
-		//printf("%s \033[0;32mPASSED\033[0m in %f\n", filePath, (double)time / CLOCKS_PER_SEC);
-		printf("%s \033[0;32mPASSED\033[0m\n", filePath);
+		printf("%s \033[0;32mPASSED\033[0m in %f\n", filePath, (double)time / CLOCKS_PER_SEC);
+		//printf("%s \033[0;32mPASSED\033[0m\n", filePath);
 	}
 	else
 	{
@@ -413,6 +414,8 @@ int main()
 {
 	RunTest("tests/basicmove.test");
 	RunTest("tests/grouparoundtrees.test");
+	RunTest("tests/multiplelongformationpaths.test");
+	RunTest("tests/5x5paths.test");
 
 	return 0;
 }

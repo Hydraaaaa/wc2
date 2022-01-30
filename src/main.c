@@ -4,6 +4,7 @@
 
 #include "scenario.c"
 #include "pathfinder.c"
+#include "test.c"
 
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 720
@@ -26,10 +27,7 @@ int main()
 
 	Scenario* scenario = malloc(sizeof(Scenario));
 
-	printf("PathingNode: %li\n", sizeof(PathingNode));
-	printf("Pathfinder: %li\n", sizeof(Pathfinder));
-
-	Scenario_Load(scenario, "scenarios/Gold Rush BNE.pud");
+	Scenario_Load(scenario, "scenarios/Garden of War Classic BNE.pud");
 
 	// Pathfinder list
 	Pathfinder* pathfinders = malloc(sizeof(Pathfinder) * 128);
@@ -46,6 +44,15 @@ int main()
 	Pathfinder* selectedUnits[128];
 	int selectedUnitCount = 0;
 
+	// Debug smooth frames square
+	int squarePhase = 0;
+	float squareProgress = 0.0f;
+
+	// Test
+	Test test;
+
+	Test_Init(&test);
+
     // Main game loop
     while (!WindowShouldClose())
     {
@@ -53,37 +60,6 @@ int main()
 
 		// Camera controls
 		float cameraSpeed = time * 1024.0f;
-
-		// Get test printout of current path state, useful for setting up tests
-		if (IsKeyDown(KEY_RIGHT_BRACKET))
-		{
-			printf("PathfinderResult* pathfinderResults;\n");
-			printf("const int pathfinderCount = %i;\n\n", pathfinderCount);
-
-			printf("Point* blockers;\n");
-			printf("const int blockerCount = %i;\n\n", pathingBlockerCount);
-
-			printf("pathfinderResults = malloc(sizeof(PathfinderResult) * pathfinderCount);\n");
-
-			for (int i = 0; i < pathfinderCount; i++)
-			{
-				printf("pathfinderResults[%i].startPos = (Point){%i, %i};\n", i, pathfinders[i].currentLocation->posX, pathfinders[i].currentLocation->posY);
-				printf("pathfinderResults[%i].pathLength = %i;\n", i, pathfinders[i].currentPathLength);
-				printf("pathfinderResults[%i].path = malloc(sizeof(Point) * %i);\n", i, pathfinders[i].currentPathLength);
-
-				for (int j = 0; j < pathfinders[i].currentPathLength; j++)
-				{
-					printf("pathfinderResults[%i].path[%i] = (Point){%i, %i};\n", i, j, pathfinders[i].currentPath[j]->posX, pathfinders[i].currentPath[j]->posY);
-				}
-			}
-
-			printf("blockers = malloc(sizeof(Point) * blockerCount);\n");
-
-			for (int i = 0; i < pathingBlockerCount; i++)
-			{
-				printf("blockers[%i] = (Point){%i, %i};\n", i, pathingBlockers[i]->posX, pathingBlockers[i]->posY);
-			}
-		}
 
 		if (IsKeyDown(KEY_UP))
 		{
@@ -121,8 +97,6 @@ int main()
 
 			int endX = (GetMouseX() - cameraPosX + 16) / 32;
 			int endY = (GetMouseY() - cameraPosY + 16) / 32;
-
-			selectedUnitCount = 0;
 
 			if (startX < 0)
 			{
@@ -178,6 +152,8 @@ int main()
 				highestY = startY;
 			}
 
+			selectedUnitCount = 0;
+
 			for (int y = lowestY; y < highestY; y++)
 			{
 				int yIndex = y * scenario->mapSize;
@@ -193,6 +169,14 @@ int main()
 			}
 
 			dragging = false;
+
+			Test_AllocateAction(&test);
+
+			test.lastAction->action = ACTION_SELECT;
+			test.lastAction->param1 = lowestX;
+			test.lastAction->param2 = lowestY;
+			test.lastAction->param3 = highestX;
+			test.lastAction->param4 = highestY;
 		}
 
 		if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON))
@@ -256,6 +240,15 @@ int main()
 					// Just clump around the destination
 					CommandPathfindersPoint(selectedUnits, selectedUnitCount, &scenario->pathingNodes[mouseX + mouseY * scenario->mapSize], scenario);
 				}
+
+				Test_AllocateAction(&test);
+
+				test.lastAction->action = ACTION_PATHFIND;
+				test.lastAction->param1 = mouseX;
+				test.lastAction->param2 = mouseY;
+
+				Test_AllocateFrameData(&test);
+				TestFrameData_Populate(test.lastFrameData, pathfinders, pathfinderCount);
 			}
 		}
 
@@ -288,6 +281,12 @@ int main()
 					pathfinderCount++;
 
 					Scenario_UpdateRegions(scenario);
+
+					Test_AllocateAction(&test);
+
+					test.lastAction->action = ACTION_SPAWN_GRUNT;
+					test.lastAction->param1 = mouseX;
+					test.lastAction->param2 = mouseY;
 				}
 			}
 		}
@@ -304,6 +303,12 @@ int main()
 			pathingBlockerCount++;
 
 			Scenario_UpdateRegions(scenario);
+
+			Test_AllocateAction(&test);
+
+			test.lastAction->action = ACTION_SPAWN_BLOCKER;
+			test.lastAction->param1 = mouseX;
+			test.lastAction->param2 = mouseY;
 		}
 
 		if (IsKeyPressed(KEY_M))
@@ -325,10 +330,19 @@ int main()
 			}
 
 			Scenario_UpdateRegions(scenario);
+
+			Test_AllocateAction(&test);
+
+			test.lastAction->action = ACTION_MOVE;
+
+			Test_AllocateFrameData(&test);
+			TestFrameData_Populate(test.lastFrameData, pathfinders, pathfinderCount);
 		}
 
-
-			file = fopen("newtest.test", "wb");
+		// Save test
+		if (IsKeyPressed(KEY_T))
+		{
+			FILE* file = fopen("newtest.test", "wb");
 
 			TestAction* currentAction = test.firstAction;
 			TestFrameData* currentFrameData = test.firstFrameData;
@@ -687,6 +701,32 @@ int main()
 				}
 			}
 		}
+
+		// Draw Smooth Square
+		squareProgress += time;
+
+		if (squareProgress >= 0.5f)
+		{
+			squareProgress -= 0.5f;
+			squarePhase ++;
+
+			if (squarePhase > 3)
+			{
+				squarePhase = 0;
+			}
+		}
+
+		int posX, posY;
+
+		switch (squarePhase)
+		{
+			case 0: posX = squareProgress * 80; posY = 40; break;
+			case 1: posX = 40; posY = (0.5f - squareProgress) * 80; break;
+			case 2: posX = (0.5f - squareProgress) * 80; posY = 0; break;
+			case 3: posX = 0; posY = squareProgress * 80; break;
+		}
+
+		DrawRectangle(SCREEN_WIDTH - 100 + posX, SCREEN_HEIGHT - 100 + posY, 40, 40, RAYWHITE);
 
 		sprintf(fpsString, "%i", GetFPS());
 
