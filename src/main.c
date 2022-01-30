@@ -328,6 +328,85 @@ int main()
 		}
 
 
+			file = fopen("newtest.test", "wb");
+
+			TestAction* currentAction = test.firstAction;
+			TestFrameData* currentFrameData = test.firstFrameData;
+
+			u16 actionCount = 0;
+
+			while (currentAction != NULL)
+			{
+				actionCount++;
+				currentAction = currentAction->next;
+			}
+
+			// Write u16 action count
+			fwrite(&actionCount, 2, 1, file);
+
+			currentAction = test.firstAction;
+
+			while (currentAction != NULL)
+			{
+				// Write u8 action
+				fwrite(&currentAction->action, 1, 1, file);
+
+				bool writeFrameData = false;
+
+				switch (currentAction->action)
+				{
+					case ACTION_SELECT:
+						// Write u8 param1, u8 param2, u8 param3, u8 param4
+						fwrite(&currentAction->param1, 1, 4, file);
+						break;
+					case ACTION_PATHFIND:
+						// Write u8 param1, u8 param2
+						fwrite(&currentAction->param1, 1, 2, file);
+						writeFrameData = true;
+						break;
+					case ACTION_MOVE:
+						writeFrameData = true;
+						break;
+					case ACTION_SPAWN_GRUNT:
+						// Write u8 param1, u8 param2
+						fwrite(&currentAction->param1, 1, 2, file);
+						break;
+					case ACTION_SPAWN_BLOCKER:
+						// Write u8 param1, u8 param2
+						fwrite(&currentAction->param1, 1, 2, file);
+						break;
+				}
+
+				currentAction = currentAction->next;
+
+				if (writeFrameData)
+				{
+					// Write u16 pathfinder count
+					fwrite(&currentFrameData->pathfinderCount, 2, 1, file);
+
+					for (int i = 0; i < currentFrameData->pathfinderCount; i++)
+					{
+						// Write u8 x, u8 y
+						fwrite(&currentFrameData->pathfinderPositions[i].x, 1, 2, file);
+
+						// Write u16 path length
+						fwrite(&currentFrameData->pathfinderPathLengths[i], 2, 1, file);
+
+						for (int j = 0; j < currentFrameData->pathfinderPathLengths[i]; j++)
+						{
+							// Write u8 x, u8 y
+							fwrite(&currentFrameData->pathfinderPaths[i][j].x, 1, 2, file);
+						}
+					}
+
+					currentFrameData = currentFrameData->next;
+				}
+			}
+
+			fclose(file);
+		}
+
+
 		// Rendering <><><><><><><><><><><><><><><><><><><><><><><><><><><><>
 
 
