@@ -473,8 +473,6 @@ void Pathfinder_Move(Pathfinder* pathfinder, Pathfinder* dependencyStack[], int 
 						{
 							pathfinder = dependencyStack[dependencyStackLength];
 
-							pathfinder->currentLocation->currentPathfinder = NULL;
-
 							pathfinder->currentLocation = pathfinder->currentPath[pathfinder->currentPathIndex];
 
 							pathfinder->currentLocation->currentPathfinder = pathfinder;
@@ -503,7 +501,25 @@ void Pathfinder_Move(Pathfinder* pathfinder, Pathfinder* dependencyStack[], int 
 							}
 						}
 
-						break;
+						// Check if any pathfinders were in the stack before the circular dependency
+						//
+						// dependencyStackLength is currently off by one
+						// The most recent pathfinder was added in place of dependencyStackLength
+						// And dependencyStackLength was never incremented
+						if (dependencyStackLength > -1)
+						{
+							pathfinder = dependencyStack[dependencyStackLength];
+
+							// Check if the pathfinder at the beginning of the circular dependency is now stationary
+							if (!pathfinder->currentPath[pathfinder->currentPathIndex]->currentPathfinder->isPathfinding)
+							{
+								dependencyStackLength--;
+
+								Pathfinder_Move(pathfinder, dependencyStack, dependencyStackLength, scenario);
+							}
+						}
+
+						return;
 					}
 				}
 
@@ -513,6 +529,8 @@ void Pathfinder_Move(Pathfinder* pathfinder, Pathfinder* dependencyStack[], int 
 					dependencyStackLength++;
 
 					Pathfinder_Move(pathfinder->currentPath[pathfinder->currentPathIndex]->currentPathfinder, dependencyStack, dependencyStackLength, scenario);
+
+					return;
 				}
 			}
 			else

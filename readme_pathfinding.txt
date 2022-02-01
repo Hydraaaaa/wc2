@@ -58,7 +58,7 @@ The result may look something like this
 Once networking enters the equation, each pathfinder may need to do its pathfinding right before the movement tick to ensure deterministic behaviour with the order of units pathing
 
 MOVING
-(This is all theoretical at the moment)
+
 
 Both Ps have their corresponding paths based on X
 Now, they actually have to move
