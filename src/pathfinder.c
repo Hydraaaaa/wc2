@@ -418,6 +418,24 @@ void CommandPathfindersFormation(Pathfinder* pathfinders[], int pathfinderCount,
 		int indexX = pathfinders[i]->currentLocation->posX + offsetX;
 		int indexY = pathfinders[i]->currentLocation->posY + offsetY;
 
+		if (indexX < 0)
+		{
+			indexX = 0;
+		}
+		else if (indexX >= scenario->mapSize)
+		{
+			indexX = scenario->mapSize - 1;
+		}
+
+		if (indexY < 0)
+		{
+			indexY = 0;
+		}
+		else if (indexY >= scenario->mapSize)
+		{
+			indexY = scenario->mapSize - 1;
+		}
+
 		PathingNode* node = &scenario->pathingNodes[indexX + indexY * scenario->mapSize];
 		Pathfinder_GetPath(pathfinders[i], node, scenario);
 	}
