@@ -363,8 +363,6 @@ void RunTest(char* filePath)
 		action = action->next;
 	}
 
-	time = clock() - time;
-
 	if (success)
 	{
 		printf("%s \033[0;32mPASSED\033[0m in %f\n", filePath, (double)time / CLOCKS_PER_SEC);
@@ -414,8 +412,10 @@ int main()
 {
 	RunTest("tests/basicmove.test");
 	RunTest("tests/grouparoundtrees.test");
-	RunTest("tests/multiplelongformationpaths.test");
+	RunTest("tests/longformation.test");
 	RunTest("tests/5x5paths.test");
+	RunTest("tests/9snaking.test");
+	RunTest("tests/stresstestpathfind.test");
 
 	return 0;
 }

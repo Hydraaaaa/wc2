@@ -622,7 +622,7 @@ int main()
 			DrawRectangleLines(selectedUnits[i]->currentLocation->posX * 32.0f + cameraPosX, selectedUnits[i]->currentLocation->posY * 32.0f + cameraPosY, 32, 32, GREEN);
 		}
 
-		Color debugColors[] = { WHITE, PINK, PURPLE, YELLOW, LIGHTGRAY, ORANGE, RED };
+		Color debugColors[] = { WHITE, PINK, PURPLE, YELLOW, LIGHTGRAY, ORANGE, RED, MAGENTA, VIOLET };
 
 		int debugIndex = 0;
 
@@ -657,7 +657,7 @@ int main()
 
 				debugIndex++;
 
-				if (debugIndex == 7)
+				if (debugIndex == 9)
 				{
 					debugIndex = 0;
 				}
@@ -695,7 +695,7 @@ int main()
 
 				debugIndex++;
 
-				if (debugIndex == 7)
+				if (debugIndex == 9)
 				{
 					debugIndex = 0;
 				}

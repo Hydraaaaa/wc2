@@ -290,28 +290,13 @@ void Pathfinder_GetPath(Pathfinder* pathfinder, PathingNode* destination, Scenar
 						pathfinder = oldDestinedPathfinder;
 
 						// If the original pathfinder wasn't targeting the same desired location as the current pathfinder
-						if (currentNode->pathingNode->destinedPathfinder->desiredLocation != destination)
+						if (oldDestinedPathfinder->desiredLocation != destination)
 						{
 							// Restart algorithm with the previously destined pathfinder, as they need a new location
-							destination = oldDestinedPathfinder->desiredLocation;
-
-							for (int i = 0; i < openSetLength; i++)
-							{
-								openSet[i]->g = 32767;
-							}
-
-							openSetLength = 1;
-
-							openSet[0] = &pathingNodes[destination->posX + destination->posY * scenario->mapSize];
-
-							openSet[0]->g = 0;
-
-							// Set all nodes to not closed
-							for (int i = 0; i < scenario->mapSize * scenario ->mapSize; i++)
-							{
-								pathingNodes[i].closed = false;
-							}
+							Pathfinder_GetPath(oldDestinedPathfinder, oldDestinedPathfinder->desiredLocation, scenario);
+							return;
 						}
+
 						// Else switch the pathfinders, but continue with the algorithm as-is
 					}
 
@@ -370,7 +355,6 @@ void Pathfinder_GetPath(Pathfinder* pathfinder, PathingNode* destination, Scenar
 
 	if (!success)
 	{
-		//printf("GetPath Fail\n");
 		return;
 	}
 }
