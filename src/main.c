@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include "raylib.h"
 
 #include "scenario.c"
@@ -38,7 +39,7 @@ int main()
 	u8 pathingBlockerCount = 0;
 
 	// Mouse selection
-	int mouseStartPosX, mouseStartPosY;
+	float mouseStartPosX, mouseStartPosY;
 	bool dragging = false;
 
 	Pathfinder* selectedUnits[128];
@@ -92,11 +93,11 @@ int main()
 
 		if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON))
 		{
-			int startX = (mouseStartPosX + 16) / 32;
-			int startY = (mouseStartPosY + 16) / 32;
+			float startX = (mouseStartPosX + 16) / 32 - 0.5f;
+			float startY = (mouseStartPosY + 16) / 32 - 0.5f;
 
-			int endX = (GetMouseX() - cameraPosX + 16) / 32;
-			int endY = (GetMouseY() - cameraPosY + 16) / 32;
+			float endX = (GetMouseX() - cameraPosX + 16) / 32 - 0.5f;
+			float endY = (GetMouseY() - cameraPosY + 16) / 32 - 0.5f;
 
 			if (startX < 0)
 			{
@@ -134,11 +135,11 @@ int main()
 				endY = scenario->mapSize - 1;
 			}
 
-			int lowestX = startX;
-			int highestX = endX;
+			float lowestX = startX;
+			float highestX = endX;
 
-			int lowestY = startY;
-			int highestY = endY;
+			float lowestY = startY;
+			float highestY = endY;
 
 			if (endX < startX)
 			{
@@ -151,6 +152,11 @@ int main()
 				lowestY = endY;
 				highestY = startY;
 			}
+
+			lowestX = floor(lowestX);
+			lowestY = floor(lowestY);
+			highestX = ceil(highestX);
+			highestY = ceil(highestY);
 
 			selectedUnitCount = 0;
 
@@ -586,36 +592,6 @@ int main()
 			DrawRectangle(vec.x, vec.y, 32, 32, MAROON);
 		}
 
-		// Draw Box Select
-		if (dragging)
-		{
-			float startX = mouseStartPosX + cameraPosX;
-			float startY = mouseStartPosY + cameraPosY;
-
-			float endX = GetMouseX();
-			float endY = GetMouseY();
-
-			int lowestX = startX;
-			int highestX = endX;
-
-			int lowestY = startY;
-			int highestY = endY;
-
-			if (endX < startX)
-			{
-				lowestX = endX;
-				highestX = startX;
-			}
-
-			if (endY < startY)
-			{
-				lowestY = endY;
-				highestY = startY;
-			}
-
-			DrawRectangleLines(lowestX, lowestY, highestX - lowestX, highestY - lowestY, GREEN);
-		}
-
 		// Draw Selection Outlines
 		for (int i = 0; i < selectedUnitCount; i++)
 		{
@@ -700,6 +676,36 @@ int main()
 					debugIndex = 0;
 				}
 			}
+		}
+
+		// Draw Box Select
+		if (dragging)
+		{
+			float startX = mouseStartPosX + cameraPosX;
+			float startY = mouseStartPosY + cameraPosY;
+
+			float endX = GetMouseX();
+			float endY = GetMouseY();
+
+			int lowestX = startX;
+			int highestX = endX;
+
+			int lowestY = startY;
+			int highestY = endY;
+
+			if (endX < startX)
+			{
+				lowestX = endX;
+				highestX = startX;
+			}
+
+			if (endY < startY)
+			{
+				lowestY = endY;
+				highestY = startY;
+			}
+
+			DrawRectangleLines(lowestX, lowestY, highestX - lowestX, highestY - lowestY, GREEN);
 		}
 
 		// Draw Smooth Square
