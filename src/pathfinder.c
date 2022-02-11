@@ -192,10 +192,6 @@ bool Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 			destinationNode = destinationNode->precedingNode;
 		}
 	}
-	else
-	{
-		printf("PathToDestination Fail (%i, %i)\n", pathfinder->currentLocation->posX, pathfinder->currentLocation->posY);
-	}
 
 	free(pathingNodes);
 
