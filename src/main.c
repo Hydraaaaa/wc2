@@ -478,9 +478,18 @@ int main()
 					case 0x068: rect.x = 32.0f * 11; rect.y = 32.0f * 19; break;
 					case 0x069: rect.x = 32.0f * 12; rect.y = 32.0f * 19; break;
 					case 0x06A: rect.x = 32.0f * 7; rect.y = 32.0f * 19; break;
+					case 0x06B: rect.x = 32.0f * 8; rect.y = 32.0f * 19; break;
+					case 0x06C: rect.x = 32.0f * 7; rect.y = 32.0f * 19; break;
+					case 0x06D: rect.x = 32.0f * 8; rect.y = 32.0f * 19; break;
+					case 0x06E: rect.x = 32.0f * 7; rect.y = 32.0f * 19; break;
+					case 0x06F: rect.x = 32.0f * 8; rect.y = 32.0f * 19; break;
 					case 0x070: rect.x = 32.0f * 1; rect.y = 32.0f * 6; break;
 					case 0x071: rect.x = 32.0f * 3; rect.y = 32.0f * 6; break;
 					case 0x072: rect.x = 32.0f * 4; rect.y = 32.0f * 6; break;
+					case 0x080: rect.x = 32.0f * 5; rect.y = 32.0f * 8; break;
+					case 0x081: rect.x = 32.0f * 17; rect.y = 32.0f * 8; break;
+					case 0x082: rect.x = 32.0f * 0; rect.y = 32.0f * 9; break;
+					case 0x083: rect.x = 32.0f * 1; rect.y = 32.0f * 9; break;
 					case 0x500: rect.x = 32.0f * 1; rect.y = 32.0f * 14; break;
 					case 0x501: rect.x = 32.0f * 2; rect.y = 32.0f * 14; break;
 					case 0x510: rect.x = 32.0f * 3; rect.y = 32.0f * 14; break;
