@@ -416,6 +416,8 @@ int main()
 	RunTest("tests/5x5paths.test");
 	RunTest("tests/9snaking.test");
 	RunTest("tests/stresstestpathfind.test");
+	RunTest("tests/blocked.test");
+	RunTest("tests/repathtoself.test");
 
 	return 0;
 }

@@ -28,7 +28,7 @@ int main()
 
 	Scenario* scenario = malloc(sizeof(Scenario));
 
-	Scenario_Load(scenario, "scenarios/Garden of War Classic BNE.pud");
+	Scenario_Load(scenario, "scenarios/Garden of War BNE.pud");
 
 	// Pathfinder list
 	Pathfinder* pathfinders = malloc(sizeof(Pathfinder) * 128);
@@ -286,8 +286,6 @@ int main()
 
 					pathfinderCount++;
 
-					Scenario_UpdateRegions(scenario);
-
 					Test_AllocateAction(&test);
 
 					test.lastAction->action = ACTION_SPAWN_GRUNT;
@@ -325,7 +323,7 @@ int main()
 				pathfinders[i].hasMoved = false;
 			}
 
-			Pathfinder* dependencyStack[32];
+			Pathfinder* dependencyStack[128];
 
 			for (int i = 0; i < pathfinderCount; i++)
 			{
@@ -334,8 +332,6 @@ int main()
 					Pathfinder_Move(&pathfinders[i], dependencyStack, 0, scenario);
 				}
 			}
-
-			Scenario_UpdateRegions(scenario);
 
 			Test_AllocateAction(&test);
 

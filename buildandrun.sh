@@ -1,6 +1,6 @@
 #!/bin/bash
 
-gcc src/main.c -o bin/wc2 -Wall -pg -lraylib -lpthread -ldl -lrt -lX11 -Iinc
+gcc src/main.c -o bin/wc2 -Wall -g -lraylib -lpthread -ldl -lrt -lX11 -lm -Iinc
 
 if [ $? -eq 0 ];
 then
