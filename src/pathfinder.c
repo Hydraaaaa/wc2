@@ -270,7 +270,6 @@ void Pathfinder_GetPath(Pathfinder* pathfinder, PathingNode* destination, Scenar
 	{
 		pathingNodes[i].pathingNode = &scenario->pathingNodes[i];
 		pathingNodes[i].g = 32767;
-		pathingNodes[i].h = 0;
 		pathingNodes[i].closed = false;
 	}
 
