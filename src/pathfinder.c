@@ -117,15 +117,12 @@ bool Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 					childValue = child2Value;
 					childIndex = child2Index;
 				}
-				// Compare whether this improves performance or not
-				//else if (childValue == child2Value)
-				//{
-				//	if (openSet[childIndex]->h > openSet[child2Index]->h)
-				//	{
-				//		childValue = child2Value;
-				//		childIndex = child2Index;
-				//	}
-				//}
+				else if (childValue == child2Value &&
+						 openSet[childIndex]->h > openSet[child2Index]->h)
+				{
+					childValue = child2Value;
+					childIndex = child2Index;
+				}
 			}
 
 			if (openSet[currentIndex]->g + openSet[currentIndex]->h > childValue)
@@ -185,14 +182,12 @@ bool Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 						openSet[connection->heapIndex] = parent;
 						connection->heapIndex = parentIndex;
 					}
-					//else if (connection->g + connection->h == parent->g + parent->h)
-					//{
-					//	if (connection->h < parent->h)
-					//	{
-					//		openSet[connection->heapIndex] = parent;
-					//		connection->heapIndex = parentIndex;
-					//	}
-					//}
+					else if (connection->g + connection->h == parent->g + parent->h &&
+							 connection->h < parent->h)
+					{
+						openSet[connection->heapIndex] = parent;
+						connection->heapIndex = parentIndex;
+					}
 					else
 					{
 						break;
