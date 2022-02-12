@@ -33,6 +33,7 @@ typedef struct PathingNodeReference
 	struct PathingNodeReference* precedingNode;
 	u16 g;
 	u16 h;
+	u16 heapIndex;
 	bool closed;
 } PathingNodeReference;
 
@@ -61,8 +62,7 @@ bool Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 	for (int i = 0; i < scenario->mapSize * scenario->mapSize; i++)
 	{
 		pathingNodes[i].pathingNode = &scenario->pathingNodes[i];
-		pathingNodes[i].g = 32767;
-		pathingNodes[i].h = 0;
+		pathingNodes[i].heapIndex = 32767;
 		pathingNodes[i].closed = false;
 	}
 
@@ -83,22 +83,63 @@ bool Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 	{
 		// currentNode = the neighbouring node with the lowest g + h cost
 		PathingNodeReference* currentNode = openSet[0];
-		int index = 0;
-
-		for (int i = 1; i < openSetLength; i++)
-		{
-			if (openSet[i]->h < currentNode->h &&
-				openSet[i]->h + openSet[i]->g < currentNode->h + currentNode->g)
-			{
-				currentNode = openSet[i];
-				index = i;
-			}
-		}
 
 		if (currentNode->pathingNode == destination)
 		{
 			success = true;
 			break;
+		}
+
+		// Remove current element from open set
+		openSet[0] = openSet[openSetLength - 1];
+		openSetLength--;
+
+		int currentIndex = 0;
+
+		// Put last object in heap on top, then swap down into place
+		while (currentIndex * 2 + 1 < openSetLength)
+		{
+			// Previously not only was g+h tested, but also just h
+			// Don't remember why
+			int childIndex = currentIndex * 2 + 1;
+			int child2Index = currentIndex * 2 + 2;
+
+			int childValue;
+
+			childValue = openSet[childIndex]->g + openSet[childIndex]->h;
+
+			if (child2Index < openSetLength)
+			{
+				int child2Value = openSet[child2Index]->g + openSet[child2Index]->h;
+
+				if (childValue > child2Value)
+				{
+					childValue = child2Value;
+					childIndex = child2Index;
+				}
+				// Compare whether this improves performance or not
+				//else if (childValue == child2Value)
+				//{
+				//	if (openSet[childIndex]->h > openSet[child2Index]->h)
+				//	{
+				//		childValue = child2Value;
+				//		childIndex = child2Index;
+				//	}
+				//}
+			}
+
+			if (openSet[currentIndex]->g + openSet[currentIndex]->h > childValue)
+			{
+				PathingNodeReference* temp = openSet[currentIndex];
+				openSet[currentIndex] = openSet[childIndex];
+				openSet[childIndex] = temp;
+			}
+			else
+			{
+				break;
+			}
+
+			currentIndex = childIndex;
 		}
 
 		// Add any pathable neighbours to the open set, set their g, h costs
@@ -117,31 +158,49 @@ bool Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 
 			PathingNodeReference* connection = &pathingNodes[currentNode->pathingNode->connections[i]->posX + currentNode->pathingNode->connections[i]->posY * scenario->mapSize];
 
-			if (newG < connection->g)
+			if (connection->heapIndex == 32767 ||
+				newG < connection->g)
 			{
+				connection->g = newG;
+				connection->h = GetHeuristic(connection, destination);
+				connection->precedingNode = currentNode;
+
 				// If node isn't in open list
-				// G value will always be 32767 if node hasn't been added to the open list yet
-				if (connection->g == 32767)
+				if (connection->heapIndex == 32767)
 				{
+					connection->heapIndex = openSetLength;
 					openSet[openSetLength] = connection;
 					openSetLength++;
 				}
 
-				connection->g = newG;
-				connection->h = GetHeuristic(connection, destination);
-				connection->precedingNode = currentNode;
+				// G cost has lowered
+				// Bubble up the connection however much is necessary
+				while (connection->heapIndex > 0)
+				{
+					int parentIndex = (connection->heapIndex - 1) / 2;
+					PathingNodeReference* parent = openSet[parentIndex];
+
+					if (connection->g + connection->h < parent->g + parent->h)
+					{
+						openSet[connection->heapIndex] = parent;
+						connection->heapIndex = parentIndex;
+					}
+					//else if (connection->g + connection->h == parent->g + parent->h)
+					//{
+					//	if (connection->h < parent->h)
+					//	{
+					//		openSet[connection->heapIndex] = parent;
+					//		connection->heapIndex = parentIndex;
+					//	}
+					//}
+					else
+					{
+						break;
+					}
+				}
+
+				openSet[connection->heapIndex] = connection;
 			}
-		}
-
-		// Remove current element from open set
-		openSetLength--;
-
-		// memmove errors if it tries to move 0 bytes
-		if (openSetLength > index)
-		{
-			// Shift all subsequent open set elements back by 1, overwriting the current element in the open set
-			// Not overflowing because we already decremented openSetLength
-			memmove(&openSet[index], &openSet[index + 1], sizeof(PathingNode*) * (openSetLength - index));
 		}
 
 		currentNode->closed = true;
