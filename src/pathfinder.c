@@ -43,14 +43,18 @@ int GetHeuristic(PathingNode* source, PathingNode* destination)
 	int xDist = abs(destination->posX - source->posX);
 	int yDist = abs(destination->posY - source->posY);
 
-	if (xDist > yDist)
-	{
-		return yDist * 14 + (xDist - yDist) * 10;
-	}
-	else
-	{
-		return xDist * 14 + (yDist - xDist) * 10;
-	}
+	return (yDist * 14 + (xDist - yDist) * 10) * (xDist > yDist) +
+		   (xDist * 14 + (yDist - xDist) * 10) * (yDist >= xDist);
+
+	// Identical to above code, just slightly less performant
+	//if (xDist > yDist)
+	//{
+	//	return yDist * 14 + (xDist - yDist) * 10;
+	//}
+	//else
+	//{
+	//	return xDist * 14 + (yDist - xDist) * 10;
+	//}
 }
 
 // Typical Astar search algorithm
