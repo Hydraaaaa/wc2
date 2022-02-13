@@ -127,9 +127,24 @@ bool Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 
 			if (openSet[currentIndex]->g + openSet[currentIndex]->h > childValue)
 			{
+				// Swap
 				PathingNodeReference* temp = openSet[currentIndex];
 				openSet[currentIndex] = openSet[childIndex];
 				openSet[childIndex] = temp;
+
+				openSet[currentIndex]->heapIndex = currentIndex;
+				openSet[childIndex]->heapIndex = childIndex;
+			}
+			else if (openSet[currentIndex]->g + openSet[currentIndex]->h == childValue &&
+					 openSet[currentIndex]->h > openSet[childIndex]->h)
+			{
+				// Swap
+				PathingNodeReference* temp = openSet[currentIndex];
+				openSet[currentIndex] = openSet[childIndex];
+				openSet[childIndex] = temp;
+
+				openSet[currentIndex]->heapIndex = currentIndex;
+				openSet[childIndex]->heapIndex = childIndex;
 			}
 			else
 			{
@@ -142,21 +157,21 @@ bool Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 		// Add any pathable neighbours to the open set, set their g, h costs
 		for (int i = 0; i < currentNode->pathingNode->connectionCount; i++)
 		{
+			PathingNodeReference* connection = &pathingNodes[currentNode->pathingNode->connections[i]->posX + currentNode->pathingNode->connections[i]->posY * scenario->mapSize];
+
 			// Check if this connection is unpathable or already closed
-			if ((currentNode->pathingNode->connections[i]->type & pathfinder->pathingFlag) == 0 ||
-				currentNode->closed == true ||
-				(currentNode->pathingNode->connections[i]->currentPathfinder != NULL &&
-				!currentNode->pathingNode->connections[i]->currentPathfinder->isPathfinding))
+			if ((connection->pathingNode->type & pathfinder->pathingFlag) == 0 ||
+				connection->closed == true ||
+				(connection->pathingNode->currentPathfinder != NULL &&
+				!connection->pathingNode->currentPathfinder->isPathfinding))
 			{
 				continue;
 			}
 
 			int newG = currentNode->g + currentNode->pathingNode->connectionCosts[i];
 
-			PathingNodeReference* connection = &pathingNodes[currentNode->pathingNode->connections[i]->posX + currentNode->pathingNode->connections[i]->posY * scenario->mapSize];
-
-			if (connection->heapIndex == 32767 ||
-				newG < connection->g)
+			if ((connection->heapIndex == 32767 ||
+				newG < connection->g))
 			{
 				connection->g = newG;
 				connection->h = GetHeuristic(connection, destination);
@@ -179,14 +194,28 @@ bool Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 
 					if (connection->g + connection->h < parent->g + parent->h)
 					{
-						openSet[connection->heapIndex] = parent;
-						connection->heapIndex = parentIndex;
+						// Swap
+						int childIndex = connection->heapIndex;
+
+						PathingNodeReference* temp = openSet[parentIndex];
+						openSet[parentIndex] = openSet[childIndex];
+						openSet[childIndex] = temp;
+
+						openSet[parentIndex]->heapIndex = parentIndex;
+						openSet[childIndex]->heapIndex = childIndex;
 					}
 					else if (connection->g + connection->h == parent->g + parent->h &&
 							 connection->h < parent->h)
 					{
-						openSet[connection->heapIndex] = parent;
-						connection->heapIndex = parentIndex;
+						// Swap
+						int childIndex = connection->heapIndex;
+
+						PathingNodeReference* temp = openSet[parentIndex];
+						openSet[parentIndex] = openSet[childIndex];
+						openSet[childIndex] = temp;
+
+						openSet[parentIndex]->heapIndex = parentIndex;
+						openSet[childIndex]->heapIndex = childIndex;
 					}
 					else
 					{
