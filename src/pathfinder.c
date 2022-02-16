@@ -465,6 +465,10 @@ void CommandPathfindersPoint(Pathfinder* pathfinders[], int pathfinderCount, Pat
 		{
 			pathfinders[i]->currentPath[pathfinders[i]->currentPathLength - 1]->destinedPathfinder = NULL;
 		}
+		else if (pathfinders[i]->currentLocation->destinedPathfinder == pathfinders[i])
+		{
+			pathfinders[i]->currentLocation->destinedPathfinder = NULL;
+		}
 
 		pathfinders[i]->currentPathLength = 0;
 		pathfinders[i]->currentPathIndex = 0;
@@ -486,6 +490,10 @@ void CommandPathfindersFormation(Pathfinder* pathfinders[], int pathfinderCount,
 		if (pathfinders[i]->currentPathLength > 0)
 		{
 			pathfinders[i]->currentPath[pathfinders[i]->currentPathLength - 1]->destinedPathfinder = NULL;
+		}
+		else if (pathfinders[i]->currentLocation->destinedPathfinder == pathfinders[i])
+		{
+			pathfinders[i]->currentLocation->destinedPathfinder = NULL;
 		}
 
 		pathfinders[i]->currentPathLength = 0;
