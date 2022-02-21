@@ -106,7 +106,7 @@ bool Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 			// Previously not only was g+h tested, but also just h
 			// Don't remember why
 			int childIndex = currentIndex * 2 + 1;
-			int child2Index = currentIndex * 2 + 2;
+			int child2Index = childIndex + 1;
 
 			int childValue;
 
@@ -161,13 +161,14 @@ bool Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 		// Add any pathable neighbours to the open set, set their g, h costs
 		for (int i = 0; i < currentNode->pathingNode->connectionCount; i++)
 		{
-			PathingNodeReference* connection = &pathingNodes[currentNode->pathingNode->connections[i]->posX + currentNode->pathingNode->connections[i]->posY * scenario->mapSize];
+			PathingNode* connectionNode = currentNode->pathingNode->connections[i];
+			PathingNodeReference* connection = &pathingNodes[connectionNode->posX + connectionNode->posY * scenario->mapSize];
 
 			// Check if this connection is unpathable or already closed
-			if ((connection->pathingNode->type & pathfinder->pathingFlag) == 0 ||
+			if ((connectionNode->type & pathfinder->pathingFlag) == 0 ||
 				connection->closed == true ||
-				(connection->pathingNode->currentPathfinder != NULL &&
-				!connection->pathingNode->currentPathfinder->isPathfinding))
+				(connectionNode->currentPathfinder != NULL &&
+				!connectionNode->currentPathfinder->isPathfinding))
 			{
 				continue;
 			}
@@ -178,7 +179,7 @@ bool Pathfinder_PathToDestination(Pathfinder* pathfinder, PathingNode* destinati
 				newG < connection->g))
 			{
 				connection->g = newG;
-				connection->h = GetHeuristic(connection->pathingNode, destination);
+				connection->h = GetHeuristic(connectionNode, destination);
 				connection->precedingNode = currentNode;
 
 				// If node isn't in open list
@@ -529,6 +530,42 @@ void CommandPathfindersFormation(Pathfinder* pathfinders[], int pathfinderCount,
 	}
 }
 
+// Used by Pathfinder_Move
+// Called when each pathfinder waiting for a space to free is now clear to fill that space
+void ResolveDependencyStack(Pathfinder* dependencyStack[], int index, PathingNode* destination, bool circular)
+{
+	while (index >= 0)
+	{
+		Pathfinder* pathfinder = dependencyStack[index];
+
+		// In the event of a circular dependency, overwriting the old location as null, will end up overwriting the intended pathfinder
+		if (!circular)
+		{
+			pathfinder->currentLocation->currentPathfinder = NULL;
+		}
+
+		PathingNode* previousLocation = pathfinder->currentLocation;
+
+		pathfinder->currentLocation = destination;
+
+		destination = previousLocation;
+
+		pathfinder->currentLocation->currentPathfinder = pathfinder;
+
+		// If reached destination
+		if (pathfinder->currentLocation->destinedPathfinder == pathfinder)
+		{
+			pathfinder->currentLocation->destinedPathfinder = NULL;
+			pathfinder->isPathfinding = false;
+		}
+
+		pathfinder->currentPathIndex++;
+		pathfinder->hasMoved = true;
+
+		index--;
+	}
+}
+
 void Pathfinder_Move(Pathfinder* pathfinder, Pathfinder* dependencyStack[], int dependencyStackLength, Scenario* scenario)
 {
 	if (pathfinder->isPathfinding)
@@ -566,8 +603,6 @@ void Pathfinder_Move(Pathfinder* pathfinder, Pathfinder* dependencyStack[], int 
 			// If the blocker hasn't moved yet, try adding them to the stack
 			if (!nextNodePathfinder->hasMoved)
 			{
-				bool circularDependency = false;
-
 				// Check for a circular dependency
 				for (int i = 0; i < dependencyStackLength; i++)
 				{
@@ -579,50 +614,19 @@ void Pathfinder_Move(Pathfinder* pathfinder, Pathfinder* dependencyStack[], int 
 						// If any pathfinders remain in the stack after the circular dependency,
 						// Attempt to steer whichever one is on the top of the stack
 
-						circularDependency = true;
-
 						dependencyStack[dependencyStackLength] = pathfinder;
 
-						bool finished = false;
+						ResolveDependencyStack(&dependencyStack[i], dependencyStackLength - i, nextNodePathfinder->currentLocation, true);
 
-						while (true)
-						{
-							pathfinder = dependencyStack[dependencyStackLength];
-
-							pathfinder->currentLocation = pathfinder->currentPath[pathfinder->currentPathIndex];
-
-							pathfinder->currentLocation->currentPathfinder = pathfinder;
-
-							// If reached destination
-							if (pathfinder->currentLocation->destinedPathfinder == pathfinder)
-							{
-								pathfinder->currentLocation->destinedPathfinder = NULL;
-								pathfinder->isPathfinding = false;
-							}
-
-							pathfinder->currentPathIndex++;
-							pathfinder->hasMoved = true;
-
-							dependencyStackLength--;
-
-							// Using this because it needs to run one last time once the end condition is met
-							if (finished)
-							{
-								break;
-							}
-
-							if (dependencyStack[dependencyStackLength] == nextNodePathfinder)
-							{
-								finished = true;
-							}
-						}
+						dependencyStackLength = i - 1;
 
 						// Check if any pathfinders were in the stack before the circular dependency
 						//
 						// dependencyStackLength is currently off by one
 						// The most recent pathfinder was added in place of dependencyStackLength
 						// And dependencyStackLength was never incremented
-						if (dependencyStackLength > -1)
+
+						if (i > 0)
 						{
 							pathfinder = dependencyStack[dependencyStackLength];
 
@@ -634,72 +638,92 @@ void Pathfinder_Move(Pathfinder* pathfinder, Pathfinder* dependencyStack[], int 
 					}
 				}
 
-				if (!circularDependency)
+				dependencyStack[dependencyStackLength] = pathfinder;
+				dependencyStackLength++;
+
+				if (dependencyStackLength > 128)
 				{
-					dependencyStack[dependencyStackLength] = pathfinder;
-					dependencyStackLength++;
-
-					if (dependencyStackLength > 128)
-					{
-						printf("DEPENDENCY STACK LIMIT BREACHED >128\n");
-					}
-
-					Pathfinder_Move(pathfinder->currentPath[pathfinder->currentPathIndex]->currentPathfinder, dependencyStack, dependencyStackLength, scenario);
-
-					return;
+					printf("DEPENDENCY STACK LIMIT BREACHED >128\n");
 				}
+
+				Pathfinder_Move(nextNodePathfinder, dependencyStack, dependencyStackLength, scenario);
+
+				return;
 			}
 			else
 			{
 				// Last ditch effort at movement this turn
 				// Check for other tiles which also connect to the tile after the current one in the path
 				
-				for (int i = 0; i < pathfinder->currentLocation->connectionCount; i++)
+				if (pathfinder->currentPathIndex + 1 < pathfinder->currentPathLength)
 				{
-					if ((pathfinder->currentLocation->connections[i]->type & pathfinder->pathingFlag) != 0 &&
-						pathfinder->currentLocation->connections[i] != pathfinder->currentPath[pathfinder->currentPathIndex] &&
-						GetHeuristic(pathfinder->currentLocation->connections[i], pathfinder->currentPath[pathfinder->currentPathIndex + 1]) <= 14)
+					for (int i = 0; i < pathfinder->currentLocation->connectionCount; i++)
 					{
-						if (pathfinder->currentLocation->connections[i]->currentPathfinder == NULL)
+						if ((pathfinder->currentLocation->connections[i]->type & pathfinder->pathingFlag) != 0 &&
+								pathfinder->currentLocation->connections[i] != pathfinder->currentPath[pathfinder->currentPathIndex] &&
+								GetHeuristic(pathfinder->currentLocation->connections[i], pathfinder->currentPath[pathfinder->currentPathIndex + 1]) <= 14)
 						{
-							// Add to dependency stack, then move all the pathfinders in the stack, since they're all free now
-							dependencyStack[dependencyStackLength] = pathfinder;
+							nextNodePathfinder = pathfinder->currentLocation->connections[i]->currentPathfinder;
 
-							PathingNode* destinationNode = pathfinder->currentLocation->connections[i];
-
-							while (dependencyStackLength >= 0)
+							if (nextNodePathfinder == NULL)
 							{
-								pathfinder = dependencyStack[dependencyStackLength];
+								// Add to dependency stack, then move all the pathfinders in the stack, since they're all free now
+								dependencyStack[dependencyStackLength] = pathfinder;
 
-								pathfinder->currentLocation->currentPathfinder = NULL;
+								ResolveDependencyStack(dependencyStack, dependencyStackLength, pathfinder->currentLocation->connections[i], false);
 
-								PathingNode* previousLocation = pathfinder->currentLocation;
-
-								pathfinder->currentLocation = destinationNode;
-
-								destinationNode = previousLocation;
-
-								pathfinder->currentLocation->currentPathfinder = pathfinder;
-
-								// If reached destination
-								if (pathfinder->currentLocation->destinedPathfinder == pathfinder)
+								break;
+							}
+							else if (nextNodePathfinder->isPathfinding &&
+									!nextNodePathfinder->hasMoved)
+							{
+								// Check for a circular dependency
+								for (int i = 0; i < dependencyStackLength; i++)
 								{
-									pathfinder->currentLocation->destinedPathfinder = NULL;
-									pathfinder->isPathfinding = false;
+									if (nextNodePathfinder == dependencyStack[i])
+									{
+										// Circular Dependency
+										// Resolve all pathfinders down to nextNodePathfinder
+										//
+										// If any pathfinders remain in the stack after the circular dependency,
+										// Attempt to steer whichever one is on the top of the stack
+
+										dependencyStack[dependencyStackLength] = pathfinder;
+
+										ResolveDependencyStack(&dependencyStack[i], dependencyStackLength - i, nextNodePathfinder->currentLocation, true);
+
+										dependencyStackLength = i - 1;
+
+										// Check if any pathfinders were in the stack before the circular dependency
+										//
+										// dependencyStackLength is currently off by one
+										// The most recent pathfinder was added in place of dependencyStackLength
+										// And dependencyStackLength was never incremented
+
+										if (i > 0)
+										{
+											pathfinder = dependencyStack[dependencyStackLength];
+
+											// Rerun movement on top of the remaining stack for any potential steering moves
+											Pathfinder_Move(pathfinder, dependencyStack, dependencyStackLength, scenario);
+										}
+
+										return;
+									}
 								}
 
-								pathfinder->currentPathIndex++;
-								pathfinder->hasMoved = true;
+								dependencyStack[dependencyStackLength] = pathfinder;
+								dependencyStackLength++;
 
-								dependencyStackLength--;
+								if (dependencyStackLength > 128)
+								{
+									printf("DEPENDENCY STACK LIMIT BREACHED >128\n");
+								}
+
+								Pathfinder_Move(nextNodePathfinder, dependencyStack, dependencyStackLength, scenario);
+
+								break;
 							}
-						}
-						else if (pathfinder->currentLocation->connections[i]->currentPathfinder->isPathfinding &&
-								 !pathfinder->currentLocation->connections[i]->currentPathfinder->hasMoved)
-						{
-							dependencyStack[dependencyStackLength] = pathfinder;
-							dependencyStackLength++;
-							Pathfinder_Move(pathfinder->currentLocation->connections[i]->currentPathfinder, dependencyStack, dependencyStackLength, scenario);
 						}
 					}
 				}
@@ -713,34 +737,7 @@ void Pathfinder_Move(Pathfinder* pathfinder, Pathfinder* dependencyStack[], int 
 			// Add to dependency stack, then move all the pathfinders in the stack, since they're all free now
 			dependencyStack[dependencyStackLength] = pathfinder;
 
-			PathingNode* destinationNode = pathfinder->currentPath[pathfinder->currentPathIndex];
-
-			while (dependencyStackLength >= 0)
-			{
-				pathfinder = dependencyStack[dependencyStackLength];
-
-				pathfinder->currentLocation->currentPathfinder = NULL;
-
-				PathingNode* previousLocation = pathfinder->currentLocation;
-
-				pathfinder->currentLocation = destinationNode;
-
-				destinationNode = previousLocation;
-
-				pathfinder->currentLocation->currentPathfinder = pathfinder;
-
-				// If reached destination
-				if (pathfinder->currentLocation->destinedPathfinder == pathfinder)
-				{
-					pathfinder->currentLocation->destinedPathfinder = NULL;
-					pathfinder->isPathfinding = false;
-				}
-
-				pathfinder->currentPathIndex++;
-				pathfinder->hasMoved = true;
-
-				dependencyStackLength--;
-			}
+			ResolveDependencyStack(dependencyStack, dependencyStackLength, pathfinder->currentPath[pathfinder->currentPathIndex], false);
 		}
 	}
 }
